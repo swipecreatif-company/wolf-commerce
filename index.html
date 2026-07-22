@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>The Wolf Commerce</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -29,6 +29,8 @@
       color: var(--ink);
       font-family: 'Inter', sans-serif;
       overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
     }
     ::selection {
       background: var(--pink);
@@ -37,6 +39,8 @@
     .page {
       position: relative;
       width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
     /* ----- NAV ----- */
@@ -49,6 +53,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       padding: 26px 5%;
       background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), transparent);
     }
@@ -61,6 +66,7 @@
       align-items: center;
       gap: 10px;
       color: var(--ink);
+      white-space: nowrap;
     }
     .logo .dot {
       width: 8px;
@@ -68,6 +74,7 @@
       border-radius: 50%;
       background: var(--pink);
       box-shadow: 0 0 12px 2px var(--pink);
+      flex-shrink: 0;
     }
     .nav-links {
       display: flex;
@@ -96,6 +103,7 @@
       letter-spacing: 0.3px;
       transition: background 0.25s ease, border-color 0.25s ease;
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .nav-cta:hover {
       background: var(--pink);
@@ -112,11 +120,10 @@
     .hero-pin {
       position: relative;
       height: 100vh;
+      height: 100svh;
       width: 100%;
       overflow: hidden;
-      background:
-        /* main teal backdrop */
-        radial-gradient(ellipse 90% 70% at 50% 40%, #07d6a0 0%, #0a4b3e 70%, #000000 100%);
+      /* background:radial-gradient(ellipse 90% 70% at 50% 40%, #07d6a0 0%, #0a4b3e 70%, #000000 100%); */
       contain: layout paint;
     }
 
@@ -153,7 +160,7 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.65) 0%, rgb(0 0 0 / 28%) 50%, rgba(0, 0, 0, 0.15) 100%), linear-gradient(to top, rgba(0, 0, 0, 0.50), transparent 50%);
+        linear-gradient(90deg, rgba(0, 0, 0, 0.65) 0%, rgb(0 0 0 / 28%) 14%, rgba(0, 0, 0, 0.15) 100%), linear-gradient(to top, rgba(0, 0, 0, 0.50), transparent 50%);
       z-index: 2;
       pointer-events: none;
     }
@@ -290,18 +297,46 @@
     }
 
     /* ----- RESPONSIVE ----- */
+
+    /* Tablet / small laptop */
+    @media (max-width: 1024px) {
+      .hero-bottom-copy {
+        width: min(380px, 46vw);
+      }
+    }
+
+    /* Nav starts stacking links away at 860px already; tighten spacing a bit before that */
+    @media (max-width: 900px) {
+      nav {
+        padding: 22px 5%;
+      }
+    }
+
+    /* Mobile / tablet portrait */
     @media (max-width: 760px) {
+      nav {
+        padding: 18px 5%;
+      }
+      .logo {
+        font-size: 16px;
+        gap: 8px;
+      }
+      .nav-cta {
+        padding: 9px 18px;
+        font-size: 12.5px;
+      }
       .wolf-wrap {
         opacity: 0.45;
       }
       .marquee-track span {
         font-size: clamp(38px, 8vw, 76px);
         -webkit-text-stroke: 1px rgba(255, 255, 255, 0.1);
+        padding: 0 24px;
       }
       .hero-bottom-copy {
         left: 5%;
         right: 5%;
-        bottom: 76px;
+        bottom: 84px;
         width: auto;
       }
       .hero-bottom-copy h2 {
@@ -311,7 +346,95 @@
         max-width: 340px;
         font-size: 13px;
       }
+      .scroll-cue {
+        bottom: 20px;
+        right: 5%;
+        font-size: 10.5px;
+        gap: 8px;
+      }
+      .scroll-cue .line {
+        height: 22px;
+      }
     }
+
+    /* Small phones */
+    @media (max-width: 480px) {
+      nav {
+        padding: 16px 5%;
+        gap: 8px;
+      }
+      .logo {
+        font-size: 13px;
+        gap: 6px;
+        letter-spacing: 0.2px;
+      }
+      .logo .dot {
+        width: 6px;
+        height: 6px;
+      }
+      .nav-cta {
+        padding: 8px 14px;
+        font-size: 11.5px;
+      }
+      .marquee-track span {
+        font-size: clamp(32px, 10vw, 56px);
+        padding: 0 18px;
+      }
+      .hero-bottom-copy {
+        bottom: 78px;
+      }
+      .hero-bottom-copy h2 {
+        font-size: clamp(18px, 6.5vw, 24px);
+      }
+      .hero-bottom-copy p {
+        max-width: none;
+        font-size: 12.5px;
+        line-height: 1.55;
+      }
+      .hero-bottom-copy::before {
+        width: 28px;
+        margin-bottom: 10px;
+      }
+      .scroll-cue {
+        bottom: 16px;
+        font-size: 9.5px;
+        letter-spacing: 1.5px;
+      }
+    }
+
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .logo {
+        font-size: 11.5px;
+      }
+      .nav-cta {
+        padding: 7px 12px;
+        font-size: 11px;
+      }
+      .hero-bottom-copy h2 {
+        font-size: clamp(16px, 6.5vw, 21px);
+      }
+      .hero-bottom-copy p {
+        font-size: 12px;
+      }
+    }
+
+    /* Short viewports (landscape phones / small laptops) - avoid copy & scroll cue colliding */
+    @media (max-height: 480px) and (max-width: 900px) {
+      .hero-bottom-copy {
+        bottom: 54px;
+      }
+      .hero-bottom-copy p {
+        display: none;
+      }
+      .scroll-cue {
+        bottom: 14px;
+      }
+      .marquee-track span {
+        font-size: clamp(28px, 7vw, 48px);
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .scroll-cue .line {
         animation: none;
@@ -425,9 +548,7 @@
       var FRAME_COUNT = 25;
       var FRAME_PATH = 'assets/wolf-sequence/';
       var FRAME_PREFIX = 'ezgif-frame-';
-      var FRAME_EXTENSION = '.jpg';
-      var FRAME_POSITION_X = 0.5;
-      var FRAME_POSITION_Y = 0.5;
+      var FRAME_EXTENSION = '.png';
       var ENABLE_FRAME_BLEND = true;
 
       var canvasEl = null;
@@ -443,6 +564,61 @@
       var requestedFrameFloat = 0;
       var renderedFrameFloat = -1;
       var renderScheduled = false;
+
+      /* ----- RESPONSIVE FIT CONFIG -----
+         Desktop keeps the original full-bleed "cover" composition.
+         Tablet and mobile switch to "contain" so the wolf's silhouette
+         never gets pushed past the left/right edges of a narrow/portrait
+         viewport. Scale + focal position are tuned per tier and can be
+         adjusted here without touching the drawing math below. */
+      var DESKTOP_BREAKPOINT = 1024;
+      var MOBILE_BREAKPOINT = 760;
+
+      var DESKTOP_FIT_MODE = 'cover';
+      var TABLET_FIT_MODE = 'contain';
+      var MOBILE_FIT_MODE = 'contain';
+
+      var DESKTOP_FRAME_SCALE = 1;
+      var TABLET_FRAME_SCALE = 0.96;
+      var MOBILE_FRAME_SCALE = 0.92;
+
+      var DESKTOP_POSITION_X = 0.5;
+      var DESKTOP_POSITION_Y = 0.5;
+
+      var TABLET_POSITION_X = 0.5;
+      var TABLET_POSITION_Y = 0.48;
+
+      var MOBILE_POSITION_X = 0.5;
+      var MOBILE_POSITION_Y = 0.46;
+
+      /* Resolves which fit mode / scale / focal point to use for the
+         current viewport width. Called fresh on every render so it always
+         reflects the latest breakpoint (no stale caching across resizes). */
+      function getFrameRenderConfig() {
+        var w = window.innerWidth;
+        if (w > DESKTOP_BREAKPOINT) {
+          return {
+            fitMode: DESKTOP_FIT_MODE,
+            scale: DESKTOP_FRAME_SCALE,
+            positionX: DESKTOP_POSITION_X,
+            positionY: DESKTOP_POSITION_Y
+          };
+        }
+        if (w > MOBILE_BREAKPOINT) {
+          return {
+            fitMode: TABLET_FIT_MODE,
+            scale: TABLET_FRAME_SCALE,
+            positionX: TABLET_POSITION_X,
+            positionY: TABLET_POSITION_Y
+          };
+        }
+        return {
+          fitMode: MOBILE_FIT_MODE,
+          scale: MOBILE_FRAME_SCALE,
+          positionX: MOBILE_POSITION_X,
+          positionY: MOBILE_POSITION_Y
+        };
+      }
 
       function buildFrameSources() {
         var sources = [];
@@ -495,43 +671,73 @@
         return null;
       }
 
-      function drawImageCover(ctx, img, cw, ch, alpha) {
+      /* Computes the draw rect (width/height/offset) for one image inside
+         the canvas, given a resolved fit config. Aspect ratio is always
+         preserved - width and height are never scaled independently. */
+      function calculateFrameDrawRect(imgW, imgH, cw, ch, config) {
+        var baseScale = (config.fitMode === 'cover')
+          ? Math.max(cw / imgW, ch / imgH)   // cover: fill the canvas, may crop
+          : Math.min(cw / imgW, ch / imgH);  // contain: fit fully inside, may letterbox
+
+        var scale = baseScale * config.scale;
+        var drawWidth = imgW * scale;
+        var drawHeight = imgH * scale;
+
+        /* Safety clamp: in contain mode the configured scale multiplier
+           should never be allowed to push the image wider than the
+           canvas - this is what guarantees the wolf can't spill past the
+           left/right edges on mobile/tablet even if the scale constants
+           above are tuned up later. */
+        if (config.fitMode === 'contain' && drawWidth > cw) {
+          var clampScale = cw / imgW;
+          drawWidth = imgW * clampScale;
+          drawHeight = imgH * clampScale;
+        }
+
+        return {
+          drawWidth: drawWidth,
+          drawHeight: drawHeight,
+          offsetX: (cw - drawWidth) * config.positionX,
+          offsetY: (ch - drawHeight) * config.positionY
+        };
+      }
+
+      /* Draws one frame into the canvas using the render config resolved
+         for the current viewport. Desktop keeps the original full-bleed
+         cover composition; tablet/mobile use contain so the full wolf
+         silhouette stays inside the screen instead of being cropped. The
+         canvas element itself always stays full-screen - only what gets
+         drawn inside it changes. */
+      function drawImageResponsive(ctx, img, cw, ch, alpha, config) {
         var imgW = img.width || img.naturalWidth;
         var imgH = img.height || img.naturalHeight;
         if (!imgW || !imgH) return;
-        var canvasRatio = cw / ch;
-        var imgRatio = imgW / imgH;
-        var drawWidth, drawHeight;
-        if (imgRatio > canvasRatio) {
-          drawHeight = ch;
-          drawWidth = drawHeight * imgRatio;
-        } else {
-          drawWidth = cw;
-          drawHeight = drawWidth / imgRatio;
-        }
-        var offsetX = (cw - drawWidth) * FRAME_POSITION_X;
-        var offsetY = (ch - drawHeight) * FRAME_POSITION_Y;
+        var rect = calculateFrameDrawRect(imgW, imgH, cw, ch, config);
         ctx.globalAlpha = alpha;
-        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+        ctx.drawImage(img, rect.offsetX, rect.offsetY, rect.drawWidth, rect.drawHeight);
       }
 
       function renderFrameSequence(frameFloat) {
         if (!canvasCtx || canvasWidth === 0 || canvasHeight === 0) return;
         canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+        /* Resolve the fit config once per render so the blended lower and
+           upper frames always use identical sizing/position - avoids any
+           ghosting from mismatched cover/contain math between the two. */
+        var config = getFrameRenderConfig();
         if (ENABLE_FRAME_BLEND) {
           var lowerIndex = Math.floor(frameFloat);
           var blendAmount = frameFloat - lowerIndex;
           var upperIndex = Math.min(lowerIndex + 1, FRAME_COUNT - 1);
           var lowerImg = getFrameImage(lowerIndex);
-          if (lowerImg) drawImageCover(canvasCtx, lowerImg, canvasWidth, canvasHeight, 1);
+          if (lowerImg) drawImageResponsive(canvasCtx, lowerImg, canvasWidth, canvasHeight, 1, config);
           if (blendAmount > 0.001 && upperIndex !== lowerIndex) {
             var upperImg = getFrameImage(upperIndex);
-            if (upperImg) drawImageCover(canvasCtx, upperImg, canvasWidth, canvasHeight, blendAmount);
+            if (upperImg) drawImageResponsive(canvasCtx, upperImg, canvasWidth, canvasHeight, blendAmount, config);
           }
         } else {
           var nearestIndex = Math.round(frameFloat);
           var img = getFrameImage(nearestIndex);
-          if (img) drawImageCover(canvasCtx, img, canvasWidth, canvasHeight, 1);
+          if (img) drawImageResponsive(canvasCtx, img, canvasWidth, canvasHeight, 1, config);
         }
         canvasCtx.globalAlpha = 1;
       }
@@ -696,6 +902,13 @@
       window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
+          /* resizeWolfCanvas() recalculates canvas pixel dimensions and,
+             when they change, redraws the currently active frame - the
+             fit config it uses is resolved fresh from window.innerWidth
+             inside renderFrameSequence, so desktop/tablet/mobile fit
+             mode always matches the new viewport automatically. The
+             sequence position (requestedFrameFloat) is never touched, so
+             the wolf stays on its current frame instead of resetting. */
           resizeWolfCanvas();
           ScrollTrigger.refresh();
         }, 200);
