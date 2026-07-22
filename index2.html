@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wolf Commerce</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #000000;
+    --bg-deep: #000000;
+    --pink: #07D6A0;
+    --magenta: #0D4037;
+    --violet: #0D4037;
+    --ink: #ffffff;
+    --muted: #9db3ac;
+    --line: rgba(255,255,255,0.09);
+    
+    /* Gradient Colors */
+    --gradient-1: #0D4037;
+    --gradient-2: #07D6A0;
+    --gradient-3: #000000;
+
+    /* Marquee speed, controlled by JS on scroll for a "chase" feel */
+    --marquee-dur: 25s;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden;}
+  ::selection{background:var(--pink);color:#000000;}
+
+  .page{position:relative;width:100%;}
+
+  /* NAV */
+  nav{
+    position:fixed;top:0;left:0;width:100%;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:26px 5%;
+    background:linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+  }
+  .logo{
+    font-family:'Syne',sans-serif;font-weight:800;font-size:19px;letter-spacing:0.5px;
+    display:flex;align-items:center;gap:10px;color:var(--ink);
+  }
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--pink);box-shadow:0 0 12px 2px var(--pink);}
+  .nav-links{display:flex;gap:38px;list-style:none;}
+  .nav-links a{
+    color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;
+    letter-spacing:0.3px;transition:color .25s ease;
+  }
+  .nav-links a:hover{color:var(--ink);}
+  .nav-cta{
+    border:1px solid var(--line);color:var(--ink);padding:10px 22px;border-radius:100px;
+    font-size:13px;font-weight:600;text-decoration:none;letter-spacing:0.3px;
+    transition:background .25s ease, border-color .25s ease;white-space:nowrap;
+    display:inline-block;
+  }
+  .nav-cta:hover{background:var(--pink);border-color:var(--pink);color:#000000;}
+  @media (max-width:860px){ .nav-links{display:none;} }
+
+  /* Entrance-animated nav (JS sets initial state before animating in) */
+  .logo, .nav-links li, .nav-cta{ will-change:transform,opacity; }
+
+  /* HERO - Background Video */
+  .hero-pin{
+    position:relative;height:100vh;width:100%;overflow:hidden;
+    background:var(--bg-deep);
+    /* Perspective lives on the parent so .hero-scene's 3D tilt reads
+       as a real camera move instead of a flat CSS skew */
+    perspective:1400px;
+  }
+
+  /* ============================================================
+     HERO SCENE (new wrapper, additive)
+     Everything that should move together as "the world" -- video,
+     gradients, glow, grain, marquee -- now lives inside one 3D
+     layer. The HUD (corner frame / telemetry / scroll cue / reticle)
+     stays outside it and never tilts, so it reads as a fixed
+     viewfinder overlay while the scene behind it drifts with the
+     cursor. Nothing inside was removed or reordered, only wrapped.
+     ============================================================ */
+  .hero-scene{
+    position:absolute;inset:0;width:100%;height:100%;
+    transform-style:preserve-3d;
+    transform-origin:center center;
+    will-change:transform,filter;
+    filter:blur(0px);
+  }
+
+  /* Hero Background Video - Seamless Loop */
+  .hero-video-wrap{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:1;
+    overflow:hidden;
+  }
+  .hero-video{
+    width: 100%;
+    height: 100%;
+    object-fit: scale-down;
+    object-position: center center;
+    display: block;
+    pointer-events: none;
+    transform: scale(1.12);
+    will-change: transform;
+    position: relative;
+    top: 4.5rem;
+  }
+
+  /* ============================================================
+     GRADIENT OVERLAY ON VIDEO (Option 1: Full Video Overlay)
+     This creates a beautiful gradient wash over the entire video
+     ============================================================ */
+  .video-gradient-overlay{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background: 
+      linear-gradient(135deg, 
+        rgba(13, 64, 55, 0.7) 0%, 
+        rgba(7, 214, 160, 0.3) 40%, 
+        rgba(0, 0, 0, 0.6) 70%,
+        rgba(13, 64, 55, 0.8) 100%
+      );
+    mix-blend-mode:multiply;
+  }
+
+  /* ============================================================
+     GRADIENT OVERLAY ON WOLF/BACKGROUND (Option 2: Spotlight Effect)
+     This creates a gradient that highlights the wolf area
+     ============================================================ */
+  .wolf-gradient-overlay{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background: 
+      radial-gradient(ellipse 60% 80% at 50% 50%, 
+        rgba(7, 214, 160, 0.15) 0%, 
+        rgba(13, 64, 55, 0.4) 30%,
+        rgba(0, 0, 0, 0.7) 60%,
+        rgba(0, 0, 0, 0.9) 100%
+      );
+  }
+
+  /* Overlay for text readability - kept but made more subtle */
+  .hero-overlay{
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 42%, rgba(0,0,0,0.1) 72%, rgba(0,0,0,0.05) 100%),
+      linear-gradient(to top, rgba(0,0,0,0.5), transparent 40%);
+    z-index:3;
+    pointer-events:none;
+  }
+
+  /* Glow effect - enhanced with gradient colors */
+  .hero-glow{
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse 80% 70% at 50% 40%, rgba(7,214,160,0.12), transparent 70%);
+    z-index:1;
+    pointer-events:none;
+  }
+
+  /* ============================================================
+     AMBIENT PARTICLE / NETWORK CANVAS (new, additive)
+     Faint drifting motes with occasional connecting threads --
+     reads as a signal/tracking network rather than generic confetti.
+     Canvas 2D (cheap vs WebGL), capped particle count, paused via
+     IntersectionObserver + visibilitychange so it never burns cycles
+     off-screen or on a background tab.
+     ============================================================ */
+  .particle-canvas{
+    position:absolute;inset:0;width:100%;height:100%;
+    z-index:2;pointer-events:none;mix-blend-mode:screen;
+  }
+
+  /* ============================================================
+     CURSOR SPOTLIGHT (new, additive)
+     A soft teal light that follows the pointer, screen-blended so
+     it lifts the video instead of flattening it. CSS custom
+     properties are updated from JS, rAF-throttled to one write
+     per frame.
+     ============================================================ */
+  .cursor-light{
+    position:absolute;inset:0;z-index:2;pointer-events:none;
+    mix-blend-mode:screen;opacity:0;transition:opacity .5s ease;
+    background:radial-gradient(circle 420px at var(--mx,50%) var(--my,50%), rgba(7,214,160,0.16), transparent 70%);
+  }
+  .cursor-light.is-active{opacity:1;}
+
+  .grain{
+    position:absolute;inset:0;pointer-events:none;opacity:0.03;mix-blend-mode:overlay;z-index:4;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ============================================================
+     MARQUEE TEXT - Center of Hero
+     ============================================================ */
+  .marquee-wrapper{
+    position:absolute;
+    top:50%;
+    left:0;
+    width:100%;
+    transform:translateY(-50%);
+    z-index:5;
+    overflow:hidden;
+    pointer-events:none;
+    opacity:0.7;
+    /* Feathered edges so the loop feels seamless against the frame
+       instead of hard-cutting at the viewport edge */
+    -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+    mask-image:linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  }
+  .marquee-track{
+    display:flex;
+    white-space:nowrap;
+    animation: marqueeScroll var(--marquee-dur) linear infinite;
+  }
+  .marquee-track span{
+    font-family:'Syne',sans-serif;
+    font-weight:800;
+    font-size:clamp(60px, 12vw, 160px);
+    letter-spacing:0.02em;
+    color:#ffffff;
+    -webkit-text-stroke:1px rgba(255,255,255,0.12);
+    padding:0 40px;
+    text-transform:uppercase;
+  }
+  .marquee-track span .highlight{
+    color:var(--pink);
+    -webkit-text-stroke:1px var(--pink);
+  }
+
+  @keyframes marqueeScroll{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-50%);}
+  }
+
+  /* Hero Content - Positioned above marquee */
+  .hero-content{
+    position:relative;z-index:6;
+    height:100%;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:0 5%;
+    max-width:680px;
+  }
+  .eyebrow{
+    display:flex;align-items:center;gap:10px;
+    font-size:12.5px;letter-spacing:3px;text-transform:uppercase;
+    color:var(--pink);font-weight:600;margin-bottom:22px;
+  }
+  .eyebrow .rule{width:34px;height:1px;background:var(--pink);}
+  h1{
+    font-family:'Syne',sans-serif;font-weight:800;
+    font-size:clamp(40px, 5.6vw, 78px);
+    line-height:1.02;letter-spacing:-1px;
+    color:var(--ink);
+  }
+  h1 .accent{
+    background:linear-gradient(100deg, var(--pink), #5cf5d0 60%, var(--pink));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{
+    margin-top:26px;max-width:460px;
+    font-size:16px;line-height:1.65;color:var(--muted);font-weight:400;
+  }
+  .cta-row{
+    margin-top:42px;display:flex;align-items:center;gap:26px;
+  }
+  .btn-primary{
+    background:var(--pink);color:#000000;text-decoration:none;
+    padding:15px 30px;border-radius:100px;font-weight:600;font-size:14.5px;
+    letter-spacing:0.2px;transition:transform .25s ease, box-shadow .25s ease;
+    box-shadow:0 0 0 rgba(7,214,160,0);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(7,214,160,0.35);}
+  .btn-text{
+    color:var(--ink);text-decoration:none;font-size:14.5px;font-weight:500;
+    display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid var(--line);padding-bottom:3px;
+  }
+
+  .scroll-cue{
+    position:absolute;bottom:34px;left:5%;z-index:6;
+    display:flex;align-items:center;gap:12px;
+    color:var(--muted);font-size:11.5px;letter-spacing:2px;text-transform:uppercase;
+  }
+  .scroll-cue .line{width:1px;height:34px;background:linear-gradient(var(--pink), transparent);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.35;}50%{opacity:1;}}
+
+  .next-section{
+    min-height:60vh;background:var(--bg-deep);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:14px;letter-spacing:1px;
+    border-top:1px solid var(--line);
+  }
+
+  /* ============================================================
+     PREDATOR HUD SYSTEM
+     Tracking-reticle cursor + viewfinder corner brackets + two
+     telemetry labels. Sits outside .hero-scene so it stays crisp
+     and static while the scene behind it tilts/parallaxes.
+     ============================================================ */
+  .corner-frame{
+    position:absolute;
+    width:26px;height:26px;
+    border-color:rgba(7,214,160,0.55);
+    border-style:solid;
+    border-width:0;
+    z-index:7;
+    pointer-events:none;
+    opacity:0;
+    transform:scale(0.6);
+  }
+  .corner-frame.tl{top:28px;left:28px;border-top-width:1.5px;border-left-width:1.5px;transform-origin:top left;}
+  .corner-frame.tr{top:28px;right:28px;border-top-width:1.5px;border-right-width:1.5px;transform-origin:top right;}
+  .corner-frame.bl{bottom:28px;left:28px;border-bottom-width:1.5px;border-left-width:1.5px;transform-origin:bottom left;}
+  .corner-frame.br{bottom:28px;right:28px;border-bottom-width:1.5px;border-right-width:1.5px;transform-origin:bottom right;}
+
+  .hud-label{
+    position:absolute;z-index:7;
+    font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);opacity:0;font-weight:500;
+    pointer-events:none;
+  }
+  .hud-label .dim{color:rgba(157,179,172,0.55);margin-right:8px;}
+  .hud-label.hud-tl{top:66px;left:64px;}
+  .hud-label.hud-br{bottom:40px;right:64px;text-align:right;}
+
+  .reticle{
+    position:fixed;top:0;left:0;
+    width:44px;height:44px;
+    z-index:9999;
+    pointer-events:none;
+    opacity:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .reticle-ring{
+    position:absolute;inset:0;
+    border:1px solid rgba(7,214,160,0.75);
+    border-radius:50%;
+    transition:width .3s ease, height .3s ease, border-color .3s ease, background .3s ease;
+  }
+  .reticle-cross::before, .reticle-cross::after{
+    content:'';position:absolute;background:rgba(7,214,160,0.75);
+    transition:background .3s ease;
+  }
+  .reticle-cross::before{width:1px;height:8px;left:50%;top:-4px;transform:translateX(-50%);}
+  .reticle-cross::after{height:1px;width:8px;top:50%;left:-4px;transform:translateY(-50%);}
+  .reticle-label{
+    position:absolute;left:56px;top:50%;transform:translateY(-50%);
+    font-size:10px;letter-spacing:2px;color:var(--pink);
+    text-transform:uppercase;white-space:nowrap;font-weight:600;
+  }
+  .reticle.is-target .reticle-ring{
+    width:64px;height:64px;left:-10px;top:-10px;
+    background:rgba(7,214,160,0.08);
+    border-color:var(--pink);
+  }
+
+  @media (max-width:760px){
+    .hero-content{max-width:100%;}
+    .hero-video{object-fit:cover;}
+    .marquee-track span{
+      font-size:clamp(40px, 8vw, 80px);
+      -webkit-text-stroke:1px rgba(255,255,255,0.1);
+    }
+    .marquee-wrapper{opacity:0.05;}
+    .video-gradient-overlay{opacity:0.8;}
+    .wolf-gradient-overlay{opacity:0.7;}
+    /* HUD system, cursor light and particle canvas all assume a
+       precise mouse + generous screen space. On touch/small
+       viewports they're either meaningless or read as clutter, so
+       they're switched off and the layout falls back to the plain
+       (still fully animated-on-load) hero. */
+    .corner-frame, .hud-label, .reticle, .cursor-light, .particle-canvas{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <nav>
+    <div class="logo"><span class="dot"></span>THE WOLF COMMERCE</div>
+    <ul class="nav-links">
+      <li><a href="#">Platform</a></li>
+      <li><a href="#">Services</a></li>
+      <li><a href="#">Work</a></li>
+      <li><a href="#">Pricing</a></li>
+    </ul>
+    <a href="#" class="nav-cta">Get in Touch</a>
+  </nav>
+
+  <section class="hero-pin" id="heroPin">
+
+    <!-- ============================================================
+         HERO SCENE -- the tilting/parallaxing "world" layer.
+         Everything below down to (but not including) the HUD block
+         is unchanged from the original file, just moved one level
+         deeper inside this wrapper.
+         ============================================================ -->
+    <div class="hero-scene" id="heroScene">
+
+      <!-- Background Video - Seamless Loop -->
+      <div class="hero-video-wrap">
+        <video 
+          class="hero-video" 
+          id="heroVideo"
+          autoplay 
+          muted 
+          loop 
+          playsinline 
+          webkit-playsinline
+          preload="auto"
+          aria-label="Hero background video">
+          <source src="wolf 11.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      
+      <!-- ============================================================
+           GRADIENT OVERLAY - OPTION 1: Full Video Gradient
+           This creates a beautiful color wash over the entire video
+           ============================================================ -->
+      <div class="video-gradient-overlay"></div>
+      
+      <!-- ============================================================
+           GRADIENT OVERLAY - OPTION 2: Wolf/Background Spotlight
+           This highlights the wolf with a gradient effect
+           ============================================================ -->
+      <div class="wolf-gradient-overlay"></div>
+      
+      <div class="hero-glow"></div>
+
+      <!-- Ambient particle / network canvas (new) -->
+      <canvas class="particle-canvas" id="particleCanvas"></canvas>
+
+      <!-- Cursor-reactive spotlight (new) -->
+      <div class="cursor-light" id="cursorLight"></div>
+
+      <div class="hero-overlay"></div>
+      <div class="grain"></div>
+
+      <!-- ============================================================
+           MARQUEE TEXT - Center of Hero
+           ============================================================ -->
+      <div class="marquee-wrapper" id="marqueeWrapper">
+        <div class="marquee-track" id="marqueeTrack">
+          <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+          <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+          <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+          <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+        </div>
+      </div>
+
+      <!-- Hero Content -->
+      <!-- <div class="hero-content">
+        <div class="eyebrow"><span class="rule"></span>ECOMMERCE GROWTH AGENCY</div>
+        <h1>We Don't Follow<br>Markets. <span class="accent">We Hunt Them.</span></h1>
+        <p class="sub">The Wolf Commerce builds and scales online stores with the instincts of a predator and the discipline of a pack — strategy, storefronts, and performance marketing under one roof.</p>
+        <div class="cta-row">
+          <a href="#" class="btn-primary">Start the Hunt</a>
+          <a href="#" class="btn-text">View Our Work →</a>
+        </div>
+      </div> -->
+
+    </div><!-- /.hero-scene -->
+
+    <!-- ============================================================
+         PREDATOR HUD - viewfinder corners + telemetry labels.
+         Deliberately outside .hero-scene: stays fixed/crisp while
+         the scene behind it drifts, like a real viewfinder overlay.
+         ============================================================ -->
+    <div class="corner-frame tl" id="cf-tl"></div>
+    <div class="corner-frame tr" id="cf-tr"></div>
+    <div class="corner-frame bl" id="cf-bl"></div>
+    <div class="corner-frame br" id="cf-br"></div>
+    <div class="hud-label hud-tl" id="hudTl"><span class="dim">SECTOR</span>GLOBAL MARKETS</div>
+    <div class="hud-label hud-br" id="hudBr">ACTIVE HUNT<span class="dim" style="margin-left:8px;margin-right:0;">STATUS</span></div>
+
+    <div class="scroll-cue"><span class="line"></span>Scroll</div>
+  </section>
+
+  <section class="next-section">Next section goes here</section>
+
+</div>
+
+<!-- ============================================================
+     PREDATOR HUD cursor (lives outside .page so it can track the
+     whole viewport without inheriting any transform/stacking
+     context quirks from the hero section)
+     ============================================================ -->
+<div class="reticle" id="reticle">
+  <div class="reticle-ring"></div>
+  <div class="reticle-cross"></div>
+  <span class="reticle-label" id="reticleLabel">TRACK</span>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT - Seamless Video Loop & Performance
+     (unchanged from the original file)
+     ============================================================ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  
+  const video = document.getElementById('heroVideo');
+  
+  // Ensure video loops seamlessly
+  if (video) {
+    // When video ends, reset to beginning without any pause
+    video.addEventListener('ended', function() {
+      this.currentTime = 0;
+      this.play();
+    });
+    
+    // Preload and start playing
+    video.addEventListener('loadeddata', function() {
+      this.play();
+    });
+    
+    // Handle visibility change - resume if video pauses
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && video.paused) {
+        video.play();
+      }
+    });
+    
+    // Handle any errors - retry playback
+    video.addEventListener('error', function(e) {
+      console.log('Video error, attempting recovery...');
+      setTimeout(() => {
+        this.load();
+        this.play();
+      }, 1000);
+    });
+  }
+  
+});
+</script>
+
+<!-- ============================================================
+     LENIS - smooth scroll, wired into GSAP's ticker so every
+     scroll-driven tween below reads from the eased scroll position
+     rather than the browser's raw (stepped) scroll value.
+     ============================================================ -->
+<script src="https://unpkg.com/lenis@1.3.25/dist/lenis.min.js"></script>
+
+<!-- ============================================================
+     GSAP - powers Lenis sync, the entrance sequence, the scroll
+     timeline (parallax/zoom/blur), the marquee "chase" speed-up,
+     the predator reticle, the 3D scene tilt, the cursor spotlight,
+     the ambient particle network, and the magnetic CTA. Added
+     fresh, does not touch the vanilla video-loop script above.
+     ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function () {
+  if (typeof gsap === 'undefined') return;
+  gsap.registerPlugin(ScrollTrigger);
+
+  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var isFinePointer = window.matchMedia('(pointer:fine)').matches;
+  var isSmallScreen = window.matchMedia('(max-width:760px)').matches;
+  var heroPin = document.getElementById('heroPin');
+  var heroScene = document.getElementById('heroScene');
+
+  /* ---------------------------------------------------------
+     0) LENIS SMOOTH SCROLL
+     Standard Lenis + GSAP recipe: Lenis drives the eased scroll
+     position, GSAP's ticker drives Lenis's rAF loop, and
+     ScrollTrigger is told to re-read scroll on every Lenis tick
+     so pinned/scrubbed animations stay perfectly in sync instead
+     of lagging behind the smoothed scroll.
+  --------------------------------------------------------- */
+  if (!prefersReducedMotion && typeof Lenis !== 'undefined') {
+    var lenis = new Lenis({
+      duration: 1.1,
+      smoothWheel: true
+    });
+
+    lenis.on('scroll', ScrollTrigger.update);
+
+    gsap.ticker.add(function (time) {
+      lenis.raf(time * 1000);
+    });
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  /* ---------------------------------------------------------
+     1) LOAD-IN SEQUENCE
+     Nav, corner frame, HUD labels and the marquee arrive in one
+     orchestrated timeline instead of popping in together. The
+     scene itself now opens on a subtle "dolly-in" (slight scale
+     down, fade up) before any of the HUD appears, like a shot
+     settling into focus.
+  --------------------------------------------------------- */
+  var navLinks = document.querySelectorAll('.nav-links li');
+  var intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  intro.from(heroScene, { scale: 1.06, opacity: 0, duration: 1.3, ease: 'power2.out' }, 0);
+
+  intro.from('.logo', { y: -14, opacity: 0, duration: 0.6 }, 0.3);
+
+  if (navLinks.length) {
+    intro.from(navLinks, { y: -10, opacity: 0, duration: 0.5, stagger: 0.06 }, 0.4);
+  }
+  intro.from('.nav-cta', { y: -10, opacity: 0, duration: 0.5 }, 0.55);
+
+  intro.to('.corner-frame', {
+    opacity: 1, scale: 1, duration: 0.7, stagger: 0.08, ease: 'back.out(2)'
+  }, 0.5);
+
+  intro.to('#hudTl', { opacity: 0.6, duration: 0.6 }, 0.8);
+  intro.to('#hudBr', { opacity: 0.6, duration: 0.6 }, 0.9);
+
+  intro.from('#marqueeWrapper', {
+    opacity: 0, y: 24, filter: 'blur(6px)', duration: 1
+  }, 0.55);
+
+  intro.from('.scroll-cue', { opacity: 0, y: 10, duration: 0.6 }, 1.3);
+
+  /* ---------------------------------------------------------
+     2) SCROLL TIMELINE (parallax + cinematic depth-of-field exit)
+     One shared ScrollTrigger drives all of these together instead
+     of each animation creating its own trigger -- cheaper to
+     maintain and guarantees they stay perfectly in phase:
+       - video eases from its starting zoom down to natural scale
+       - overlay deepens, like the shot losing light
+       - marquee drifts for parallax depth
+       - the whole scene picks up a soft blur, a simple but
+         convincing depth-of-field as the hero hands off to the
+         next section
+  --------------------------------------------------------- */
+  if (!prefersReducedMotion) {
+    var exitTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '#heroPin',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true
+      }
+    });
+
+    exitTl.to('.hero-video', { scale: 1, ease: 'none' }, 0);
+    exitTl.to('.hero-overlay', { opacity: 0.6, ease: 'none' }, 0);
+    exitTl.to('#marqueeWrapper', { yPercent: 12, ease: 'none' }, 0);
+    exitTl.to(heroScene, { filter: 'blur(6px)', ease: 'none' }, 0);
+  }
+
+  /* ---------------------------------------------------------
+     3) MARQUEE "CHASE" SPEED-UP
+     Scrolling briefly speeds the marquee up, then it eases back
+     to its resting pace -- the pack picking up the scent.
+  --------------------------------------------------------- */
+  if (!prefersReducedMotion) {
+    var marqueeTrack = document.getElementById('marqueeTrack');
+    var speedState = { dur: 25 };
+    var restTween = null;
+
+    window.addEventListener('scroll', function () {
+      if (restTween) restTween.kill();
+
+      gsap.to(speedState, {
+        dur: 8,
+        duration: 0.4,
+        ease: 'power1.out',
+        onUpdate: function () {
+          marqueeTrack.style.setProperty('--marquee-dur', speedState.dur + 's');
+          document.documentElement.style.setProperty('--marquee-dur', speedState.dur + 's');
+        }
+      });
+
+      restTween = gsap.to(speedState, {
+        dur: 25,
+        duration: 1.4,
+        delay: 0.3,
+        ease: 'power2.out',
+        onUpdate: function () {
+          marqueeTrack.style.setProperty('--marquee-dur', speedState.dur + 's');
+          document.documentElement.style.setProperty('--marquee-dur', speedState.dur + 's');
+        }
+      });
+    }, { passive: true });
+  }
+
+  /* ---------------------------------------------------------
+     4) POINTER-DRIVEN LAYER: reticle + 3D scene tilt + spotlight
+     One mousemove handler feeds three effects so there's a single
+     listener instead of three competing ones. Desktop-only, and
+     skipped entirely under reduced-motion.
+  --------------------------------------------------------- */
+  if (!prefersReducedMotion && isFinePointer && heroPin) {
+    var reticle = document.getElementById('reticle');
+    var reticleLabel = document.getElementById('reticleLabel');
+    var cursorLight = document.getElementById('cursorLight');
+
+    gsap.set(reticle, { xPercent: -50, yPercent: -50 });
+    var reticleXTo = gsap.quickTo(reticle, 'x', { duration: 0.45, ease: 'power3.out' });
+    var reticleYTo = gsap.quickTo(reticle, 'y', { duration: 0.45, ease: 'power3.out' });
+
+    // Subtle camera-parallax tilt, capped low so it reads as premium
+    // ambience rather than a gimmick.
+    var tiltYTo = gsap.quickTo(heroScene, 'rotateY', { duration: 0.7, ease: 'power3.out' });
+    var tiltXTo = gsap.quickTo(heroScene, 'rotateX', { duration: 0.7, ease: 'power3.out' });
+
+    var lightX = 50, lightY = 50, lightTicking = false;
+
+    heroPin.addEventListener('mousemove', function (e) {
+      var rect = heroPin.getBoundingClientRect();
+      var px = e.clientX - rect.left;
+      var py = e.clientY - rect.top;
+      var nx = (px / rect.width - 0.5) * 2;
+      var ny = (py / rect.height - 0.5) * 2;
+
+      reticleXTo(e.clientX);
+      reticleYTo(e.clientY);
+
+      tiltYTo(nx * 4);
+      tiltXTo(-ny * 3);
+
+      lightX = (px / rect.width) * 100;
+      lightY = (py / rect.height) * 100;
+      if (!lightTicking) {
+        requestAnimationFrame(function () {
+          cursorLight.style.setProperty('--mx', lightX + '%');
+          cursorLight.style.setProperty('--my', lightY + '%');
+          lightTicking = false;
+        });
+        lightTicking = true;
+      }
+    });
+
+    heroPin.addEventListener('mouseenter', function (e) {
+      reticleXTo(e.clientX);
+      reticleYTo(e.clientY);
+      gsap.to(reticle, { opacity: 1, duration: 0.3 });
+      cursorLight.classList.add('is-active');
+    });
+
+    heroPin.addEventListener('mouseleave', function () {
+      gsap.to(reticle, { opacity: 0, duration: 0.3 });
+      cursorLight.classList.remove('is-active');
+      tiltXTo(0);
+      tiltYTo(0);
+    });
+
+    var navCta = document.querySelector('.nav-cta');
+    if (navCta) {
+      navCta.addEventListener('mouseenter', function () {
+        reticle.classList.add('is-target');
+        reticleLabel.textContent = 'OPEN';
+      });
+      navCta.addEventListener('mouseleave', function () {
+        reticle.classList.remove('is-target');
+        reticleLabel.textContent = 'TRACK';
+      });
+
+      // Magnetic pull -- the button leans slightly toward the cursor
+      // while it's inside, and eases back to rest on exit.
+      var ctaXTo = gsap.quickTo(navCta, 'x', { duration: 0.3, ease: 'power3.out' });
+      var ctaYTo = gsap.quickTo(navCta, 'y', { duration: 0.3, ease: 'power3.out' });
+
+      navCta.addEventListener('mousemove', function (e) {
+        var r = navCta.getBoundingClientRect();
+        ctaXTo((e.clientX - (r.left + r.width / 2)) * 0.3);
+        ctaYTo((e.clientY - (r.top + r.height / 2)) * 0.3);
+      });
+      navCta.addEventListener('mouseleave', function () {
+        ctaXTo(0);
+        ctaYTo(0);
+      });
+    }
+  }
+
+  /* ---------------------------------------------------------
+     5) AMBIENT PARTICLE / NETWORK CANVAS
+     Lightweight canvas 2D field of drifting motes with faint
+     connecting threads when two pass near each other. Paused
+     whenever the hero isn't visible or the tab is hidden, so it
+     never spends a frame off-screen.
+  --------------------------------------------------------- */
+  if (!prefersReducedMotion) {
+    var canvas = document.getElementById('particleCanvas');
+    if (canvas && canvas.getContext) {
+      var ctx = canvas.getContext('2d');
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var particles = [];
+      var particleCount = isSmallScreen ? 16 : 42;
+      var isRunning = true;
+      var rafId = null;
+
+      function resizeCanvas() {
+        canvas.width = heroPin.clientWidth * dpr;
+        canvas.height = heroPin.clientHeight * dpr;
+      }
+
+      function spawnParticles() {
+        particles = [];
+        for (var i = 0; i < particleCount; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: (Math.random() * 1.4 + 0.6) * dpr,
+            vx: (Math.random() - 0.5) * 0.1 * dpr,
+            vy: -(Math.random() * 0.22 + 0.06) * dpr,
+            alpha: Math.random() * 0.45 + 0.2
+          });
+        }
+      }
+
+      function tick() {
+        rafId = requestAnimationFrame(tick);
+        if (!isRunning) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+          if (p.x < -10) p.x = canvas.width + 10;
+          if (p.x > canvas.width + 10) p.x = -10;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(7,214,160,' + p.alpha + ')';
+          ctx.fill();
+        }
+
+        // Faint connecting threads for nearby particles -- a
+        // restrained "tracking network" feel, not a dense mesh.
+        var linkDist = 90 * dpr;
+        for (var a = 0; a < particles.length; a++) {
+          for (var b = a + 1; b < particles.length; b++) {
+            var dx = particles[a].x - particles[b].x;
+            var dy = particles[a].y - particles[b].y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < linkDist) {
+              ctx.globalAlpha = (1 - dist / linkDist) * 0.15;
+              ctx.strokeStyle = 'rgba(7,214,160,0.4)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(particles[a].x, particles[a].y);
+              ctx.lineTo(particles[b].x, particles[b].y);
+              ctx.stroke();
+              ctx.globalAlpha = 1;
+            }
+          } 
+        }
+      }
+
+      resizeCanvas();
+      spawnParticles();
+      tick();
+
+      var resizeTimer;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          resizeCanvas();
+          spawnParticles();
+        }, 250);
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        isRunning = !document.hidden;
+      });
+
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          isRunning = entries[0].isIntersecting && !document.hidden;
+        }, { threshold: 0 });
+        io.observe(heroPin);
+      }
+    }
+  }
+})();
+</script>
+
+</body>
+</html>

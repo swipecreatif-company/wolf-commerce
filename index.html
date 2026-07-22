@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wolf Commerce</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #000000;
+    --bg-deep: #000000;
+    --pink: #07D6A0;
+    --magenta: #0D4037;
+    --violet: #0D4037;
+    --ink: #ffffff;
+    --muted: #9db3ac;
+    --line: rgba(255,255,255,0.09);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden;}
+  ::selection{background:var(--pink);color:#000000;}
+
+  .page{position:relative;width:100%;}
+
+  /* NAV */
+  nav{
+    position:fixed;top:0;left:0;width:100%;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:26px 5%;
+    background:linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+  }
+  .logo{
+    font-family:'Syne',sans-serif;font-weight:800;font-size:19px;letter-spacing:0.5px;
+    display:flex;align-items:center;gap:10px;color:var(--ink);
+  }
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--pink);box-shadow:0 0 12px 2px var(--pink);}
+  .nav-links{display:flex;gap:38px;list-style:none;}
+  .nav-links a{
+    color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;
+    letter-spacing:0.3px;transition:color .25s ease;
+  }
+  .nav-links a:hover{color:var(--ink);}
+  .nav-cta{
+    border:1px solid var(--line);color:var(--ink);padding:10px 22px;border-radius:100px;
+    font-size:13px;font-weight:600;text-decoration:none;letter-spacing:0.3px;
+    transition:background .25s ease, border-color .25s ease;white-space:nowrap;
+  }
+  .nav-cta:hover{background:var(--pink);border-color:var(--pink);color:#000000;}
+  @media (max-width:860px){ .nav-links{display:none;} }
+
+  /* HERO */
+  .hero-pin{
+    position:relative;height:100vh;width:100%;overflow:hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 68% 38%, rgba(7,214,160,0.22), transparent 65%),
+      radial-gradient(ellipse 50% 40% at 20% 85%, rgba(13,64,55,0.45), transparent 70%),
+      var(--bg-deep);
+    /* PERF (Task 1): isolates this section's own layout/paint work so
+       the constant video-currentTime + marquee-transform updates below
+       never force the browser to re-measure or repaint anything
+       outside the hero while scrolling. */
+    contain:layout paint;
+  }
+  .grain{
+    position:absolute;inset:0;pointer-events:none;opacity:0.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index:3;
+  }
+
+  /* Wolf sequence now acts as the FULL hero background (not a side character). */
+  .wolf-wrap{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+    z-index:1;
+    pointer-events:none;
+  }
+  .wolf-glow{
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse 80% 70% at 50% 40%, rgba(7,214,160,0.18), transparent 70%);
+    z-index:1;
+    pointer-events:none;
+  }
+
+  /* Readability overlay so text stays crisp over the background sequence */
+  .hero-overlay{
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.62) 42%, rgba(0,0,0,0.32) 72%, rgba(0,0,0,0.18) 100%),
+      linear-gradient(to top, rgba(0,0,0,0.55), transparent 40%);
+    z-index:2;
+    pointer-events:none;
+  }
+
+  /* ============================================================
+     WOLF CANVAS (replaces the wolf MP4 / .wolf-video)
+     The video's object-fit:cover has no canvas equivalent, so the
+     "cover" cropping (fill the box, keep aspect ratio, never
+     stretch) is now computed per-frame in JS via drawImageCover()
+     instead. Opacity/is-ready, translateZ(0), and backface-visibility
+     do exactly what they did on the old video element: stay hidden
+     and blank-proof until there's a real frame to show, then fade in
+     already-correct, on its own GPU compositing layer so per-frame
+     canvas redraws during scroll never repaint anything stacked
+     above or below it. contain:strict additionally tells the browser
+     this element's internal drawing never affects surrounding layout,
+     which a canvas (no descendants, no content-driven sizing) can
+     safely guarantee.
+     ============================================================ */
+  .wolf-canvas{
+    width:100%;
+    height:100%;
+    display:block;
+    pointer-events:none;
+    will-change:opacity;
+    transform:translateZ(0);
+    backface-visibility:hidden;
+    contain:strict;
+    opacity:0;
+    transition:opacity .5s ease;
+  }
+  .wolf-canvas.is-ready{
+    opacity:1;
+  }
+
+  /* ============================================================
+     HERO CONTENT REMOVED (Task 3)
+     The eyebrow/heading/paragraph/CTA block and its styles (.hero-content,
+     .eyebrow, h1, .sub, .cta-row, .btn-primary, .btn-text) have been
+     removed at the user's request. Background sequence, hero structure,
+     the scroll-scrubbed animation system, and the scroll cue below are
+     all unchanged. The marquee added for Task 2 now occupies the
+     center of the hero in place of the removed copy.
+     ============================================================ */
+
+  /* ============================================================
+     PREMIUM INFINITE MARQUEE (Task 2)
+     Center-aligned, GPU-only (transform, never layout/paint), and
+     driven by a GSAP tween in the script below rather than a CSS
+     @keyframes loop -- see the buildMarquee() note down there for why.
+     Feathered mask on both edges so the loop reads as continuous
+     motion rather than text sliding past a hard viewport edge.
+     ============================================================ */
+  .marquee-wrapper{
+    position:absolute;
+    top:50%;left:0;width:100%;
+    transform:translateY(-50%);
+    z-index:4;
+    overflow:hidden;
+    pointer-events:none;
+    opacity:0.85;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+    mask-image:linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  }
+  .marquee-track{
+    display:flex;
+    white-space:nowrap;
+    will-change:transform;
+    transform:translateZ(0);
+  }
+  .marquee-track span{
+    font-family:'Syne',sans-serif;
+    font-weight:800;
+    font-size:clamp(56px, 11vw, 150px);
+    letter-spacing:0.02em;
+    color:#ffffff;
+    -webkit-text-stroke:1px rgba(255,255,255,0.12);
+    padding:0 40px;
+    text-transform:uppercase;
+  }
+  .marquee-track span .highlight{
+    color:var(--pink);
+    -webkit-text-stroke:1px var(--pink);
+  }
+
+  /* ============================================================
+     BOTTOM-LEFT HERO COPY (Task 2 of this update)
+     Absolutely positioned inside #heroPin, layered above the canvas
+     sequence / overlay / grain (z-index 5, matching the scroll cue
+     and marquee's layer band) and below the fixed nav (z-index 50).
+     Purely presentational -- doesn't affect hero height or layout.
+     ============================================================ */
+  .hero-bottom-copy{
+    position:absolute;
+    left:5%;
+    bottom:44px;
+    z-index:5;
+    width:min(420px, 42vw);
+    pointer-events:none;
+  }
+  .hero-bottom-copy::before{
+    content:'';
+    display:block;
+    width:36px;
+    height:1px;
+    margin-bottom:14px;
+    background:var(--pink);
+    box-shadow:0 0 10px rgba(7,214,160,0.45);
+  }
+  .hero-bottom-copy h2{
+    font-family:'Syne',sans-serif;
+    font-weight:700;
+    font-size:clamp(22px, 2.4vw, 32px);
+    line-height:1.15;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .hero-bottom-copy p{
+    font-family:'Inter',sans-serif;
+    color:var(--muted);
+    font-size:clamp(13px, 1vw, 15px);
+    line-height:1.6;
+    margin-top:10px;
+    max-width:420px;
+  }
+
+  .scroll-cue{
+    position:absolute;bottom:34px;left:auto;right:5%;z-index:5;
+    display:flex;align-items:center;gap:12px;
+    color:var(--muted);font-size:11.5px;letter-spacing:2px;text-transform:uppercase;
+  }
+  .scroll-cue .line{width:1px;height:34px;background:linear-gradient(var(--pink), transparent);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.35;}50%{opacity:1;}}
+
+  /* NOTE: no manual .spacer element anymore -- GSAP's pin (end: "+=1800")
+     already reserves the exact scroll distance the animation needs.
+     A separate spacer on top of that produced a large blank gap before
+     the next section, so it has been removed. */
+
+  .next-section{
+    min-height:60vh;background:var(--bg-deep);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:14px;letter-spacing:1px;
+    border-top:1px solid var(--line);
+  }
+
+  @media (max-width:760px){
+    .wolf-wrap{opacity:0.45;}
+    .marquee-track span{
+      font-size:clamp(38px, 8vw, 76px);
+      -webkit-text-stroke:1px rgba(255,255,255,0.1);
+    }
+    .hero-bottom-copy{
+      left:5%;
+      right:5%;
+      bottom:76px;
+      width:auto;
+    }
+    .hero-bottom-copy h2{
+      font-size:clamp(20px, 6vw, 30px);
+    }
+    .hero-bottom-copy p{
+      max-width:340px;
+      font-size:13px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .scroll-cue .line{animation:none;opacity:0.6;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <nav>
+    <div class="logo"><span class="dot"></span>THE WOLF COMMERCE</div>
+    <ul class="nav-links">
+      <li><a href="#">Platform</a></li>
+      <li><a href="#">Services</a></li>
+      <li><a href="#">Work</a></li>
+      <li><a href="#">Pricing</a></li>
+    </ul>
+    <a href="#" class="nav-cta">Get in Touch</a>
+  </nav>
+
+  <section class="hero-pin" id="heroPin">
+    <div class="wolf-glow"></div>
+    <div class="wolf-wrap">
+      <!--
+        Scroll-scrubbed wolf IMAGE SEQUENCE (25 JPGs), replacing the
+        former scroll-scrubbed MP4. No frames are embedded in the DOM;
+        they're preloaded as JS Image objects and painted into this
+        single canvas. See the script block below for how scroll
+        position drives which frame(s) are drawn.
+      -->
+      <canvas
+        class="wolf-canvas"
+        id="wolfCanvas"
+        role="img"
+        aria-label="Animated neon polygon wolf background">
+      </canvas>
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="grain"></div>
+
+    <!-- ============================================================
+         HERO CONTENT REMOVED (Task 3) -- see CSS block above for
+         details. Everything that used to render here (eyebrow, h1,
+         sub copy, CTA row) is gone; nothing has replaced it in the
+         markup except the marquee below.
+         ============================================================ -->
+
+    <!-- ============================================================
+         MARQUEE - Center of Hero (Task 2)
+         Four identical copies so a -50% shift lands the 3rd/4th copy
+         exactly where the 1st/2nd started -- the loop point is
+         invisible. Animated via GSAP (see script below), not CSS
+         @keyframes.
+         ============================================================ -->
+    <div class="marquee-wrapper" id="marqueeWrapper">
+      <div class="marquee-track" id="marqueeTrack">
+        <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+        <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+        <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+        <span>We Don't Follow Markets. <span class="highlight">We Hunt Them.</span></span>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         BOTTOM-LEFT SUBHEADING + DESCRIPTION (new)
+         Sits above the canvas / overlay / grain, below nav. Revealed
+         once by buildIntro() below; not scroll-driven.
+         ============================================================ -->
+    <div class="hero-bottom-copy" id="heroBottomCopy">
+      <h2>Built to Lead the Digital Pack.</h2>
+      <p>
+        The Wolf Commerce creates practical eCommerce systems that help
+        brands launch, manage, and scale across today's leading online
+        marketplaces.
+      </p>
+    </div>
+
+    <div class="scroll-cue"><span class="line"></span>Scroll</div>
+  </section>
+
+  <!-- <section class="next-section">Next section goes here</section> -->
+
+</div>
+
+<!-- ============================================================
+     LENIS - smooth scroll (Task 1). Wired into GSAP's ticker so the
+     scroll position ScrollTrigger reads from is always the eased
+     Lenis value rather than the browser's raw, stepped scroll --
+     this is the single biggest lever for "buttery" scroll feel on
+     top of everything else below.
+     ============================================================ -->
+<script src="https://unpkg.com/lenis@1.3.25/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function () {
+  gsap.registerPlugin(ScrollTrigger);
+
+  var heroPin       = document.getElementById('heroPin');
+  var marqueeTrack  = document.getElementById('marqueeTrack');
+  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------------------------------------------------------
+     PERF (Task 1) -- global GSAP/ScrollTrigger tuning
+     - ignoreMobileResize skips ScrollTrigger's expensive re-measure
+       when a phone's address bar shows/hides on scroll (a resize
+       event that isn't really a layout change worth reacting to).
+     - lagSmoothing(0) stops GSAP from trying to "catch up" in one
+       big jump if the tab was throttled in the background, which is
+       what causes a visible stutter/jump on refocus.
+  --------------------------------------------------------- */
+  ScrollTrigger.config({ ignoreMobileResize: true });
+  gsap.ticker.lagSmoothing(0);
+
+  if (!prefersReducedMotion && typeof Lenis !== 'undefined') {
+    var lenis = new Lenis({
+      duration: 1.25,
+      // Gentle ease-out cubic: smoother deceleration than Lenis's
+      // default curve, so the eased scroll position feeding the
+      // sequence render below has fewer abrupt speed/direction
+      // changes to track -- a further-smoothing tweak that benefits
+      // the whole page's scroll feel, not just the sequence.
+      easing: function (t) { return 1 - Math.pow(1 - t, 3); },
+      smoothWheel: true
+    });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(function (time) {
+      lenis.raf(time * 1000);
+    });
+  }
+
+  // Holds the single active pinned ScrollTrigger timeline so we can
+  // kill it cleanly before rebuilding (prevents duplicate ScrollTriggers
+  // if init ever runs more than once).
+  var masterTimeline = null;
+  var marqueeTween = null;
+
+  // ------------------------------------------------------------
+  // MARQUEE DIRECTION STATE (new)
+  // currentMarqueeDirection mirrors ScrollTrigger's own direction
+  // convention: 1 = down/right-to-left (default), -1 = up/left-to-right.
+  // setMarqueeDirection() only ever adjusts marqueeTween.timeScale --
+  // it never kills, restarts, or recreates the tween, so xPercent
+  // position and the infinite repeat/loop are always preserved.
+  // ------------------------------------------------------------
+  var currentMarqueeDirection = 1;
+
+  function setMarqueeDirection(direction) {
+    if (!marqueeTween) return;
+    if (direction !== 1 && direction !== -1) return;
+    if (direction === currentMarqueeDirection) return;
+
+    currentMarqueeDirection = direction;
+
+    gsap.to(marqueeTween, {
+      timeScale: direction === 1 ? 1 : -1,
+      duration: 0.3,
+      ease: 'power2.out',
+      overwrite: true
+    });
+  }
+
+  /* ============================================================
+     WOLF IMAGE SEQUENCE (replaces the former scroll-scrubbed video)
+     ============================================================
+     25 JPG frames, preloaded once as JS Image objects (optionally
+     upgraded to ImageBitmap where supported) and painted into a
+     single <canvas> -- never 25 DOM <img> elements, never re-decoded
+     per scroll tick. Scroll position drives a plain tweened number
+     (sequencePlayhead.frame) exactly the way the old video's playhead
+     drove video.currentTime; a single rAF-batched render function
+     applies it to the canvas.
+  ============================================================ */
+  var FRAME_COUNT      = 25;
+  var FRAME_PATH       = 'assets/wolf-sequence/';
+  var FRAME_PREFIX     = 'ezgif-frame-';
+  var FRAME_EXTENSION  = '.jpg';
+
+  // Cover-crop alignment (mirrors CSS object-position: center center
+  // on the old video). Adjust here (or per breakpoint in JS) if the
+  // sequence ever needs a different focal point -- never duplicate
+  // the frame set to do it.
+  var FRAME_POSITION_X = 0.5;
+  var FRAME_POSITION_Y = 0.5;
+
+  // With only 25 source frames, a hard frame-to-frame cut can look
+  // stepped during slow scrolling. Cross-fading the two nearest
+  // frames by the fractional scroll progress smooths that out. Flip
+  // to false if blending ever produces visible ghosting on the real
+  // footage -- rendering then falls back to the single nearest frame.
+  var ENABLE_FRAME_BLEND = true;
+
+  var canvasEl = null;
+  var canvasCtx = null;
+  var canvasWidth = 0;
+  var canvasHeight = 0;
+
+  var frameImages  = new Array(FRAME_COUNT).fill(null);
+  var frameLoaded  = new Array(FRAME_COUNT).fill(false);
+  var framesLoadedCount = 0;
+  var preloadPromise = null; // guards against duplicate preload requests
+
+  // Batches every scroll-driven request into at most one canvas
+  // redraw per animation frame, and skips redraws entirely while the
+  // tab is hidden.
+  var requestedFrameFloat = 0;
+  var renderedFrameFloat = -1;
+  var renderScheduled = false;
+
+  function buildFrameSources() {
+    var sources = [];
+    for (var i = 1; i <= FRAME_COUNT; i++) {
+      sources.push(FRAME_PATH + FRAME_PREFIX + String(i).padStart(3, '0') + FRAME_EXTENSION);
+    }
+    return sources;
+  }
+
+  // Loads every frame exactly once. Never rejects -- an individual
+  // failed frame is logged and skipped (renderFrameSequence falls
+  // back to the nearest successfully loaded neighbor), so one bad
+  // file can never stop the whole sequence or throw an uncaught error.
+  function preloadFrames() {
+    if (preloadPromise) return preloadPromise;
+
+    var sources = buildFrameSources();
+
+    preloadPromise = Promise.all(sources.map(function (src, i) {
+      return new Promise(function (resolve) {
+        var img = new Image();
+
+        img.onload = function () {
+          frameImages[i] = img;
+          frameLoaded[i] = true;
+          framesLoadedCount++;
+
+          if (i === 0) {
+            // Frame 001 is ready -- draw it immediately so correct
+            // content is already sitting in the canvas the moment
+            // .is-ready later fades it in (no blank/flash at reveal).
+            requestFrameRender(0);
+          }
+
+          // Optional perf upgrade where supported. Always keep the
+          // Image already stored above as the reliable fallback --
+          // createImageBitmap support/behavior is inconsistent in
+          // Safari, so its failure here must never lose the frame.
+          if (typeof createImageBitmap === 'function') {
+            createImageBitmap(img).then(function (bitmap) {
+              frameImages[i] = bitmap;
+              resolve();
+            }).catch(function () {
+              resolve();
+            });
+          } else {
+            resolve();
+          }
+        };
+
+        img.onerror = function () {
+          console.warn('[wolf-sequence] failed to load frame: ' + src);
+          frameLoaded[i] = false;
+          resolve(); // never reject -- the sequence continues without this frame
+        };
+
+        img.src = src;
+      });
+    }));
+
+    return preloadPromise;
+  }
+
+  // Nearest-neighbor fallback for a frame that failed to load, so a
+  // few missing files in the middle of the sequence never stop or
+  // visibly blank the animation.
+  function getFrameImage(index) {
+    index = Math.min(FRAME_COUNT - 1, Math.max(0, index));
+    if (frameLoaded[index] && frameImages[index]) return frameImages[index];
+    for (var d = 1; d < FRAME_COUNT; d++) {
+      var lo = index - d;
+      var hi = index + d;
+      if (lo >= 0 && frameLoaded[lo]) return frameImages[lo];
+      if (hi < FRAME_COUNT && frameLoaded[hi]) return frameImages[hi];
+    }
+    return null; // nothing loaded at all -- caller skips drawing, gradients show through
+  }
+
+  // Reproduces CSS object-fit:cover for a single drawImage call:
+  // fills the canvas, preserves the source aspect ratio, crops only
+  // as needed, keeps the subject centered per FRAME_POSITION_X/Y.
+  function drawImageCover(ctx, img, cw, ch, alpha) {
+    var imgW = img.width || img.naturalWidth;
+    var imgH = img.height || img.naturalHeight;
+    if (!imgW || !imgH) return;
+
+    var canvasRatio = cw / ch;
+    var imgRatio = imgW / imgH;
+    var drawWidth, drawHeight;
+
+    if (imgRatio > canvasRatio) {
+      drawHeight = ch;
+      drawWidth = drawHeight * imgRatio;
+    } else {
+      drawWidth = cw;
+      drawHeight = drawWidth / imgRatio;
+    }
+
+    var offsetX = (cw - drawWidth) * FRAME_POSITION_X;
+    var offsetY = (ch - drawHeight) * FRAME_POSITION_Y;
+
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+  }
+
+  // Single canvas, single context, cleared once per render. Draws the
+  // nearest frame (blend disabled) or cross-fades the two nearest
+  // frames by the fractional part of frameFloat (blend enabled).
+  // globalAlpha is always restored to 1 afterward so nothing else
+  // that might share this context is ever affected.
+  function renderFrameSequence(frameFloat) {
+    if (!canvasCtx || canvasWidth === 0 || canvasHeight === 0) return;
+
+    canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    if (ENABLE_FRAME_BLEND) {
+      var lowerIndex = Math.floor(frameFloat);
+      var blendAmount = frameFloat - lowerIndex;
+      var upperIndex = Math.min(lowerIndex + 1, FRAME_COUNT - 1);
+
+      var lowerImg = getFrameImage(lowerIndex);
+      if (lowerImg) drawImageCover(canvasCtx, lowerImg, canvasWidth, canvasHeight, 1);
+
+      if (blendAmount > 0.001 && upperIndex !== lowerIndex) {
+        var upperImg = getFrameImage(upperIndex);
+        if (upperImg) drawImageCover(canvasCtx, upperImg, canvasWidth, canvasHeight, blendAmount);
+      }
+    } else {
+      var nearestIndex = Math.round(frameFloat);
+      var img = getFrameImage(nearestIndex);
+      if (img) drawImageCover(canvasCtx, img, canvasWidth, canvasHeight, 1);
+    }
+
+    canvasCtx.globalAlpha = 1;
+  }
+
+  // Scroll/tween code calls this on every update; it only ever stores
+  // the latest requested value and schedules (never stacks) a single
+  // rAF callback to actually draw -- multiple requests between two
+  // paints collapse into one render of the freshest frame, and
+  // nothing is drawn at all while the document is hidden.
+  function requestFrameRender(frameFloat) {
+    requestedFrameFloat = frameFloat;
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(function () {
+      renderScheduled = false;
+      if (document.hidden) return;
+      if (Math.abs(requestedFrameFloat - renderedFrameFloat) < 0.001) return;
+      renderedFrameFloat = requestedFrameFloat;
+      renderFrameSequence(requestedFrameFloat);
+    });
+  }
+
+  // When the tab was hidden while a frame request was pending, paint
+  // the latest requested position as soon as it's visible again
+  // instead of leaving a stale frame on screen.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      renderedFrameFloat = -1;
+      requestFrameRender(requestedFrameFloat);
+    }
+  });
+
+  // Reads .wolf-wrap's rendered size, caps devicePixelRatio at 2, and
+  // resizes the canvas's drawing buffer only when that size actually
+  // changed -- CSS width/height stay 100% throughout, this only ever
+  // touches canvas.width/height plus an immediate redraw of whatever
+  // frame is currently on screen. Never re-preloads, never rebuilds
+  // ScrollTrigger.
+  function resizeWolfCanvas() {
+    var wrap = document.querySelector('.wolf-wrap');
+    if (!wrap || !canvasEl) return;
+
+    var rect = wrap.getBoundingClientRect();
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(1, Math.round(rect.width * dpr));
+    var h = Math.max(1, Math.round(rect.height * dpr));
+
+    if (w === canvasWidth && h === canvasHeight) return;
+
+    canvasWidth = w;
+    canvasHeight = h;
+    canvasEl.width = canvasWidth;
+    canvasEl.height = canvasHeight;
+
+    renderFrameSequence(renderedFrameFloat >= 0 ? renderedFrameFloat : 0);
+  }
+
+  function revealCanvas() {
+    canvasEl.classList.add('is-ready');
+  }
+
+  /* ---------------------------------------------------------
+     PREMIUM INFINITE MARQUEE (Task 2)
+     A GSAP tween instead of a CSS @keyframes loop, so it shares the
+     exact same rAF clock as the scroll-scrubbed sequence and the
+     Lenis smoothing above -- one timing source for the whole page
+     instead of the browser juggling two independent animation clocks
+     (which is a common cause of marquees that "jitter" against a page
+     that is otherwise scroll-smoothed). xPercent is a transform, so
+     this never touches layout: GPU composited, effectively free to
+     run continuously.
+
+     Direction (new): the tween itself is unchanged -- still a single
+     xPercent: -50, duration: 34, repeat: -1 tween. Direction reversal
+     is handled entirely by setMarqueeDirection() adjusting timeScale,
+     defined above. currentMarqueeDirection starts at 1 (right-to-left),
+     matching the tween's original default behavior.
+  --------------------------------------------------------- */
+  function buildMarquee() {
+    if (!marqueeTrack) return;
+
+    if (prefersReducedMotion) {
+      gsap.set(marqueeTrack, { xPercent: 0 });
+      return;
+    }
+
+    marqueeTween = gsap.to(marqueeTrack, {
+      xPercent: -50,
+      duration: 50,
+      ease: 'none',
+      repeat: -1
+    });
+
+    currentMarqueeDirection = 1;
+
+    // Purely decorative loop -- pause it whenever the hero isn't on
+    // screen or the tab is hidden so it never spends a frame budget
+    // somewhere the user can't see it. Resuming never resets
+    // timeScale, so the marquee always resumes in the last detected
+    // scroll direction.
+    document.addEventListener('visibilitychange', function () {
+      if (!marqueeTween) return;
+      if (document.hidden) marqueeTween.pause();
+      else marqueeTween.play();
+    });
+
+    if ('IntersectionObserver' in window) {
+      var marqueeIO = new IntersectionObserver(function (entries) {
+        if (!marqueeTween) return;
+        if (entries[0].isIntersecting && !document.hidden) marqueeTween.play();
+        else marqueeTween.pause();
+      }, { threshold: 0 });
+      marqueeIO.observe(heroPin);
+    }
+  }
+
+  /* ---------------------------------------------------------
+     LOAD-IN SEQUENCE
+     Nav and marquee arrive together in one short, orchestrated fade
+     rather than popping in fully-formed the instant the stylesheet
+     applies -- a small but deliberate cinematic touch consistent with
+     the rest of the hero. Reduced-motion gets an instant, motion-free
+     reveal instead.
+  --------------------------------------------------------- */
+  function buildIntro() {
+    var navLinks = document.querySelectorAll('.nav-links li');
+
+    if (prefersReducedMotion) {
+      gsap.set(['.logo', navLinks, '.nav-cta', '#marqueeWrapper', '#heroBottomCopy', '.scroll-cue'], { opacity: 1, y: 0 });
+      return;
+    }
+
+    var intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    intro.from('.logo', { y: -14, opacity: 0, duration: 0.6 }, 0.1);
+    if (navLinks.length) {
+      intro.from(navLinks, { y: -10, opacity: 0, duration: 0.5, stagger: 0.06 }, 0.2);
+    }
+    intro.from('.nav-cta', { y: -10, opacity: 0, duration: 0.5 }, 0.35);
+    intro.from('#marqueeWrapper', { opacity: 0, y: 24, filter: 'blur(6px)', duration: 1 }, 0.3);
+    intro.from('#heroBottomCopy', { opacity: 0, y: 16, filter: 'blur(4px)', duration: 0.8 }, 0.65);
+    intro.from('.scroll-cue', { opacity: 0, y: 10, duration: 0.6 }, 0.9);
+  }
+
+  // Plain tweened number driving the sequence, in place of the former
+  // video playhead proxy -- same rationale: GSAP/ScrollTrigger tween
+  // a simple JS value via onUpdate, never touch rendering state
+  // directly inside the scrollTrigger/scrub machinery itself.
+  var sequencePlayhead = { frame: 0 };
+
+  function buildScrollAnimation() {
+    // Kill any previous instance first so refresh/re-init never stacks
+    // duplicate ScrollTriggers on top of each other.
+    if (masterTimeline) {
+      if (masterTimeline.scrollTrigger) masterTimeline.scrollTrigger.kill();
+      masterTimeline.kill();
+      masterTimeline = null;
+    }
+
+    if (prefersReducedMotion) {
+      // Reduced motion: skip continuous scrubbing and long pinning.
+      // Show one representative static frame immediately (~40% into
+      // the sequence, matching the previous video's representative
+      // frame at 40% of its duration) and avoid any further canvas
+      // rendering.
+      requestFrameRender(Math.round((FRAME_COUNT - 1) * 0.4));
+      ScrollTrigger.create({
+        trigger: heroPin,
+        start: 'top top',
+        end: '+=100',
+        pin: true,
+        anticipatePin: 1,
+        invalidateOnRefresh: true
+      });
+      return;
+    }
+
+    var tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '#heroPin',
+        start: 'top top',
+        end: '+=1800',
+        scrub: true,
+        pin: true,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        // New: reports scroll direction only -- does not touch the
+        // sequence scrub, pin distance, or hold in any way.
+        onUpdate: function (self) {
+          setMarqueeDirection(self.direction);
+        }
+      }
+    });
+
+    // --- Sequence scrubbing: scroll progress drives the active frame ---
+    // frameFloat = scrollProgress * (FRAME_COUNT - 1)
+    // implemented via the sequencePlayhead proxy + onUpdate, exactly
+    // mirroring how the former video playhead drove video.currentTime.
+    // The scrub still spans only the first ~88% of this timeline
+    // (duration: 0.88 instead of 1) -- see the HOLD tween right below
+    // for why the remaining ~12% is deliberately left empty.
+    tl.to(sequencePlayhead, {
+      frame: FRAME_COUNT - 1,
+      ease: 'none',
+      duration: 0.88,
+      onUpdate: function () {
+        requestFrameRender(sequencePlayhead.frame);
+      }
+    }, 0);
+
+    // HOLD -- unchanged from before: guarantees "the next section
+    // never starts until the hero's scroll animation is fully
+    // complete." Frame 025 is reached at 88% into this pin's scroll
+    // distance; this empty tween occupies the final ~12% of the SAME
+    // scroll distance (the pin's total length, end: "+=1800", is
+    // unchanged) so the hero stays pinned on the finished last frame
+    // for a beat before .next-section is reachable at all.
+    tl.to({}, { duration: 0.12 }, 0.88);
+
+    // NOTE (Task 3): the hero-copy reveal that used to run alongside
+    // the scrub on this same timeline has been removed together with
+    // the hero content markup/CSS. The scrubbed sequence is now the
+    // only thing this timeline drives.
+
+    masterTimeline = tl;
+  }
+
+  function initSequence() {
+    canvasEl = document.getElementById('wolfCanvas');
+    if (!canvasEl) return;
+    canvasCtx = canvasEl.getContext('2d');
+
+    // Establish real canvas resolution before anything is drawn to it.
+    resizeWolfCanvas();
+
+    preloadFrames().then(function () {
+      revealCanvas();
+      buildScrollAnimation();
+      // Only refreshed once preload + canvas sizing are both settled,
+      // per the spec -- avoids measuring the pin against a hero whose
+      // background content isn't ready yet.
+      ScrollTrigger.refresh();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initSequence();
+    buildMarquee();
+    buildIntro();
+  });
+
+  // Debounced resize / orientation handling -- re-measures canvas
+  // resolution and ScrollTrigger's layout only; never re-preloads the
+  // frame set and never rebuilds the scroll animation itself.
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      resizeWolfCanvas();
+      ScrollTrigger.refresh();
+    }, 200);
+  });
+
+  window.addEventListener('orientationchange', function () {
+    setTimeout(function () {
+      resizeWolfCanvas();
+      ScrollTrigger.refresh();
+    }, 300);
+  });
+})();
+</script>
+
+</body>
+</html>
